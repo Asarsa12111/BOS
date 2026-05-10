@@ -1,0 +1,9 @@
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\bin\Debug\CuRSOVIK_BOS.exe.config
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\bin\Debug\CuRSOVIK_BOS.exe
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\bin\Debug\CuRSOVIK_BOS.pdb
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\obj\Debug\CuRSOVIK_BOS.csproj.AssemblyReference.cache
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\obj\Debug\CuRSOVIK_BOS.Properties.Resources.resources
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\obj\Debug\CuRSOVIK_BOS.csproj.GenerateResource.cache
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\obj\Debug\CuRSOVIK_BOS.csproj.CoreCompileInputs.cache
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\obj\Debug\CuRSOVIK_BOS.exe
+V:\Загрузки типо\Новая папка\CuRSOVIK_BOS\obj\Debug\CuRSOVIK_BOS.pdb
