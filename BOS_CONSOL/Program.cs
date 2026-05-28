@@ -11,6 +11,57 @@ using Microsoft.Win32;
 
 namespace Win81SecurityScanner
 {
+    // ========== ПЕРЕХВАТ ВЫВОДА ДЛЯ СОХРАНЕНИЯ ОТЧЁТА ==========
+    public class TeeWriter : TextWriter
+    {
+        private readonly TextWriter _original;
+        private readonly StreamWriter _logFile;
+
+        public TeeWriter(TextWriter original, StreamWriter logFile)
+        {
+            _original = original;
+            _logFile = logFile;
+        }
+
+        public override Encoding Encoding => _original.Encoding;
+
+        public override void Write(char value)
+        {
+            _original.Write(value);
+            _logFile.Write(value);
+        }
+
+        public override void Write(string value)
+        {
+            _original.Write(value);
+            _logFile.Write(value);
+        }
+
+        public override void WriteLine(string value)
+        {
+            _original.WriteLine(value);
+            _logFile.WriteLine(value);
+        }
+
+        // Переопределяем все необходимые методы для корректной работы
+        public override void WriteLine()
+        {
+            _original.WriteLine();
+            _logFile.WriteLine();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _logFile?.Dispose();
+                _original?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+    // =========================================================
+
     // Вспомогательные методы вывода и выполнения команд
     public static class Utils
     {
@@ -37,12 +88,10 @@ namespace Win81SecurityScanner
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true
-                    // не задаём StandardOutputEncoding, будем читать байты и декодировать вручную
                 };
 
                 using (Process p = Process.Start(psi))
                 {
-                    // читаем стандартный вывод и ошибки как байты
                     byte[] outputBytes, errorBytes;
                     using (MemoryStream ms = new MemoryStream())
                     {
@@ -56,7 +105,6 @@ namespace Win81SecurityScanner
                     }
                     p.WaitForExit(10000);
 
-                    // в русской консоли системные утилиты обычно выдают в OEM 866
                     Encoding oem = Encoding.GetEncoding(866);
                     string output = oem.GetString(outputBytes) + oem.GetString(errorBytes);
                     return output;
@@ -110,12 +158,34 @@ namespace Win81SecurityScanner
 
     class Program
     {
+        private static TeeWriter _teeWriter;
+        private static StreamWriter _logFileWriter;
+        private static string _reportFilePath;
+
         static void Main(string[] args)
         {
             // Критически важно для Windows 8.1 – используем Unicode (UTF-16) вместо UTF-8
             Console.OutputEncoding = Encoding.Unicode;
             Console.InputEncoding = Encoding.Unicode;
             Console.Title = "Сканер безопасности ОС Windows 8.1";
+
+            // ========== НАСТРОЙКА СОХРАНЕНИЯ ОТЧЁТА ==========
+            try
+            {
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                _reportFilePath = $"Report_{timestamp}.txt";
+                _logFileWriter = new StreamWriter(_reportFilePath, false, Encoding.Unicode);
+                _teeWriter = new TeeWriter(Console.Out, _logFileWriter);
+                Console.SetOut(_teeWriter);
+                Utils.PrintInfo($"Отчёт будет сохранён в файл: {_reportFilePath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Не удалось настроить сохранение отчёта: {ex.Message}");
+                Console.WriteLine("Работа продолжается без записи в файл.");
+                _reportFilePath = null;
+            }
+            // =================================================
 
             Utils.PrintInfo("Для корректного отображения установите в свойствах окна шрифт Lucida Console или Consolas.");
             Console.WriteLine();
@@ -150,6 +220,7 @@ namespace Win81SecurityScanner
                     case "13": Scanner.CheckAdditionalParams(); break;
                     case "14": Scanner.CheckLogs(); break;
                     case "15": Scanner.CheckPortScanDetection(); break;
+                    case "16": case "s": ShowReportPath(); break;   // НОВЫЙ ПУНКТ
                     case "0": exit = true; Utils.PrintInfo("Выход из программы..."); break;
                     case "a": RunAllChecks(); break;
                     default: Utils.PrintWarning("Неверный выбор. Попробуйте снова."); break;
@@ -162,6 +233,15 @@ namespace Win81SecurityScanner
                     Console.Clear();
                 }
             }
+
+            // ========== ЗАВЕРШЕНИЕ РАБОТЫ С ОТЧЁТОМ ==========
+            if (_teeWriter != null)
+            {
+                Console.Out.Flush(); // принудительная запись буфера
+                _teeWriter.Dispose();
+                Utils.PrintInfo($"Отчёт сохранён: {_reportFilePath}");
+            }
+            // ================================================
         }
 
         static void ShowMenu()
@@ -184,6 +264,7 @@ namespace Win81SecurityScanner
             Console.WriteLine("║ 13. Доп. параметры (SAM, Guest, кэширование)            ║");
             Console.WriteLine("║ 14. Анализ журналов событий                             ║");
             Console.WriteLine("║ 15. Обнаружение сканирования портов                     ║");
+            Console.WriteLine("║ 16. [S] Показать путь к файлу отчёта                    ║");  // НОВЫЙ ПУНКТ
             Console.WriteLine("╠══════════════════════════════════════════════════════════╣");
             Console.WriteLine("║  [A] Проверить всё   |   [0] Выход                      ║");
             Console.WriteLine("╚══════════════════════════════════════════════════════════╝");
@@ -209,6 +290,22 @@ namespace Win81SecurityScanner
             Scanner.CheckLogs();
             Scanner.CheckPortScanDetection();
             Utils.PrintSuccess("Сканирование завершено.");
+        }
+
+        static void ShowReportPath()
+        {
+            Utils.PrintHeader("Путь к текущему отчёту");
+            if (_reportFilePath != null && File.Exists(_reportFilePath))
+            {
+                string fullPath = Path.GetFullPath(_reportFilePath);
+                Console.WriteLine($"Файл отчёта: {fullPath}");
+                Console.WriteLine("Вы можете открыть его в любом текстовом редакторе.");
+                Utils.PrintRec("Отчёт сохраняется автоматически во все время работы программы.");
+            }
+            else
+            {
+                Utils.PrintWarning("Файл отчёта недоступен. Возможно, сохранение не было настроено.");
+            }
         }
     }
 
@@ -465,7 +562,6 @@ namespace Win81SecurityScanner
                     Console.WriteLine($"[{entry.TimeGenerated:dd.MM.yyyy HH:mm}] ID:{entry.InstanceId} | {entry.EntryType} | {msg}");
                 }
 
-                // Частые события
                 var freq = log.Entries.Cast<EventLogEntry>()
                     .GroupBy(e => e.InstanceId)
                     .OrderByDescending(g => g.Count())
@@ -489,7 +585,6 @@ namespace Win81SecurityScanner
             int listening = lines.Count(l => l.Contains("LISTENING"));
             Console.WriteLine($"Прослушивающихся портов (LISTENING): {listening}");
 
-            // Анализ firewall
             string fw = Utils.RunCommand("netsh", "advfirewall show allprofiles state");
             Console.WriteLine("Статус брандмауэра:");
             Console.WriteLine(fw.Length > 300 ? fw.Substring(0, 300) + "..." : fw);
