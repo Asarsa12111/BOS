@@ -36,16 +36,36 @@ namespace Win81SecurityScanner
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = Encoding.GetEncoding(866) // сохраняем OEM-кодировку для вывода системных утилит
+                    CreateNoWindow = true
+                    // не задаём StandardOutputEncoding, будем читать байты и декодировать вручную
                 };
+
                 using (Process p = Process.Start(psi))
                 {
+                    // читаем стандартный вывод и ошибки как байты
+                    byte[] outputBytes, errorBytes;
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        p.StandardOutput.BaseStream.CopyTo(ms);
+                        outputBytes = ms.ToArray();
+                    }
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        p.StandardError.BaseStream.CopyTo(ms);
+                        errorBytes = ms.ToArray();
+                    }
                     p.WaitForExit(10000);
-                    return p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd();
+
+                    // в русской консоли системные утилиты обычно выдают в OEM 866
+                    Encoding oem = Encoding.GetEncoding(866);
+                    string output = oem.GetString(outputBytes) + oem.GetString(errorBytes);
+                    return output;
                 }
             }
-            catch (Exception ex) { return $"[Ошибка выполнения]: {ex.Message}"; }
+            catch (Exception ex)
+            {
+                return $"[Ошибка выполнения]: {ex.Message}";
+            }
         }
 
         public static void PrintHeader(string title)

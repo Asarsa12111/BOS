@@ -5,3 +5,4 @@ V:\Загрузки типо\Новая папка\BOS_CONSOL\obj\Debug\BOS_CONS
 V:\Загрузки типо\Новая папка\BOS_CONSOL\obj\Debug\BOS_CONSOL.csproj.CoreCompileInputs.cache
 V:\Загрузки типо\Новая папка\BOS_CONSOL\obj\Debug\BOS_CONSOL.exe
 V:\Загрузки типо\Новая папка\BOS_CONSOL\obj\Debug\BOS_CONSOL.pdb
+V:\Загрузки типо\Новая папка\BOS_CONSOL\obj\Debug\BOS_CONSOL.exe.config
