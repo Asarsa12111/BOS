@@ -8,9 +8,12 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using Microsoft.Win32;
+using System.Runtime.InteropServices;
+
 
 namespace Win81SecurityScanner
 {
+    
     // Вспомогательные методы вывода и выполнения команд
     public static class Utils
     {
@@ -90,8 +93,13 @@ namespace Win81SecurityScanner
 
     class Program
     {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        static extern bool SetConsoleOutputCP(uint codePageID);
         static void Main(string[] args)
         {
+            SetConsoleOutputCP(65001);
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.InputEncoding = Encoding.UTF8;
             Console.OutputEncoding = Encoding.UTF8;
             Console.Title = "Сканер безопасности ОС Windows 8.1";
 
