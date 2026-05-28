@@ -8,12 +8,9 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using Microsoft.Win32;
-using System.Runtime.InteropServices;
-
 
 namespace Win81SecurityScanner
 {
-    
     // Вспомогательные методы вывода и выполнения команд
     public static class Utils
     {
@@ -40,7 +37,7 @@ namespace Win81SecurityScanner
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = Encoding.UTF8
+                    StandardOutputEncoding = Encoding.GetEncoding(866) // сохраняем OEM-кодировку для вывода системных утилит
                 };
                 using (Process p = Process.Start(psi))
                 {
@@ -53,59 +50,59 @@ namespace Win81SecurityScanner
 
         public static void PrintHeader(string title)
         {
-            Console.WriteLine($"\n🔹 {title}");
+            Console.WriteLine($"\n=== {title}");
             Console.WriteLine(new string('-', 50));
         }
 
         public static void PrintInfo(string msg)
         {
-            Console.WriteLine($"ℹ {msg}");
+            Console.WriteLine($"[i] {msg}");
         }
 
         public static void PrintWarning(string msg)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"⚠ {msg}");
+            Console.WriteLine($"[!] {msg}");
             Console.ResetColor();
         }
 
         public static void PrintDanger(string msg)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"❌ {msg}");
+            Console.WriteLine($"[X] {msg}");
             Console.ResetColor();
         }
 
         public static void PrintSuccess(string msg)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✅ {msg}");
+            Console.WriteLine($"[OK] {msg}");
             Console.ResetColor();
         }
 
         public static void PrintRec(string msg)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine($"💡 РЕКОМЕНДАЦИЯ: {msg}");
+            Console.WriteLine($"[?] РЕКОМЕНДАЦИЯ: {msg}");
             Console.ResetColor();
         }
     }
 
     class Program
     {
-        [DllImport("kernel32.dll", SetLastError = true)]
-        static extern bool SetConsoleOutputCP(uint codePageID);
         static void Main(string[] args)
         {
-            SetConsoleOutputCP(65001);
-            Console.OutputEncoding = Encoding.UTF8;
-            Console.InputEncoding = Encoding.UTF8;
-            Console.OutputEncoding = Encoding.UTF8;
+            // Критически важно для Windows 8.1 – используем Unicode (UTF-16) вместо UTF-8
+            Console.OutputEncoding = Encoding.Unicode;
+            Console.InputEncoding = Encoding.Unicode;
             Console.Title = "Сканер безопасности ОС Windows 8.1";
+
+            Utils.PrintInfo("Для корректного отображения установите в свойствах окна шрифт Lucida Console или Consolas.");
+            Console.WriteLine();
 
             if (!Utils.IsAdministrator())
             {
-                Utils.PrintWarning("⚠ Программа запущена без прав администратора. Некоторые проверки будут ограничены.");
+                Utils.PrintWarning("Программа запущена без прав администратора. Некоторые проверки будут ограничены.");
                 Console.WriteLine("Для полного анализа перезапустите консоль от имени Администратора.\n");
             }
 
@@ -175,7 +172,7 @@ namespace Win81SecurityScanner
 
         static void RunAllChecks()
         {
-            Utils.PrintInfo("🔄 Запуск полного сканирования...");
+            Utils.PrintInfo("Запуск полного сканирования...");
             Scanner.CheckOSInfo();
             Scanner.CheckHostInfo();
             Scanner.CheckUpdates();
@@ -191,7 +188,7 @@ namespace Win81SecurityScanner
             Scanner.CheckAdditionalParams();
             Scanner.CheckLogs();
             Scanner.CheckPortScanDetection();
-            Utils.PrintSuccess("✅ Сканирование завершено.");
+            Utils.PrintSuccess("Сканирование завершено.");
         }
     }
 
@@ -453,7 +450,7 @@ namespace Win81SecurityScanner
                     .GroupBy(e => e.InstanceId)
                     .OrderByDescending(g => g.Count())
                     .Take(5);
-                Console.WriteLine("\n🔝 Частые события (ID):");
+                Console.WriteLine("\nЧастые события (ID):");
                 foreach (var f in freq) Console.WriteLine($"  ID {f.Key}: {f.Count()} раз");
             }
             catch (Exception ex)
@@ -477,7 +474,6 @@ namespace Win81SecurityScanner
             Console.WriteLine("Статус брандмауэра:");
             Console.WriteLine(fw.Length > 300 ? fw.Substring(0, 300) + "..." : fw);
 
-            // Поиск в журнале безопасности признаков сканирования
             try
             {
                 EventLog secLog = new EventLog("Security");
@@ -495,6 +491,4 @@ namespace Win81SecurityScanner
             Utils.PrintRec("Включите брандмауэр, настройте блокировку после 5 неудачных входов, отключите ICMP-ответы при необходимости.");
         }
     }
- 
-
 }
